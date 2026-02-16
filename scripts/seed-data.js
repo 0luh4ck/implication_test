@@ -58,13 +58,13 @@ async function seed() {
     console.log('⏳ Insertion de données de test dans Supabase...');
 
     const { data, error } = await supabase
-        .from('quiz_attempts')
+        .from('Results')
         .insert(dummyAttempts);
 
     if (error) {
         console.error('❌ Erreur lors de l\'insertion :', error.message);
-        if (error.message.includes('relation "quiz_attempts" does not exist')) {
-            console.log('💡 Conseil : Avez-vous créé la table "quiz_attempts" dans SQL Editor sur Supabase ?');
+        if (error.message.includes('relation "Results" does not exist')) {
+            console.log('💡 Conseil : Avez-vous créé la table "Results" dans SQL Editor sur Supabase ?');
         }
     } else {
         console.log('✅ Données de test insérées avec succès !');

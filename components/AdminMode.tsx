@@ -21,7 +21,7 @@ export default function AdminMode({ onBack }: AdminModeProps) {
         setLoading(true);
         try {
             const { data, error } = await supabase
-                .from('quiz_attempts')
+                .from('Results')
                 .select('*')
                 .order('created_at', { ascending: false });
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { questions } from '@/data/questions';
+import { useState, useEffect } from 'react';
+import { questions as originalQuestions, Question } from '@/data/questions';
 import { supabase } from '@/lib/supabase';
 
 interface StudentModeProps {
@@ -17,14 +17,26 @@ export default function StudentMode({ onBack }: StudentModeProps) {
     const [step, setStep] = useState<'info' | 'quiz' | 'results'>('info');
     const [userInfo, setUserInfo] = useState<UserInfo>({ nom: '', prenom: '' });
     const [currentQuestion, setCurrentQuestion] = useState(0);
+    const [shuffledQuestions, setShuffledQuestions] = useState<Question[]>([]);
     const [userAnswers, setUserAnswers] = useState<{ questionId: number; selectedAnswer: number }[]>([]);
     const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
     const [score, setScore] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Shuffle questions on start
+    const shuffleArray = (array: any[]) => {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    };
+
     const handleInfoSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (userInfo.nom && userInfo.prenom) {
+            setShuffledQuestions(shuffleArray(originalQuestions));
             setStep('quiz');
         }
     };
@@ -38,17 +50,17 @@ export default function StudentMode({ onBack }: StudentModeProps) {
 
         const newAnswers = [
             ...userAnswers,
-            { questionId: questions[currentQuestion].id, selectedAnswer }
+            { questionId: shuffledQuestions[currentQuestion].id, selectedAnswer }
         ];
         setUserAnswers(newAnswers);
 
-        if (currentQuestion < questions.length - 1) {
+        if (currentQuestion < shuffledQuestions.length - 1) {
             setCurrentQuestion(currentQuestion + 1);
             setSelectedAnswer(null);
         } else {
             // Calculate score
             const finalScore = newAnswers.reduce((acc, answer) => {
-                const question = questions.find(q => q.id === answer.questionId);
+                const question = originalQuestions.find(q => q.id === answer.questionId);
                 return acc + (question?.correctAnswer === answer.selectedAnswer ? 1 : 0);
             }, 0);
             setScore(finalScore);
@@ -60,7 +72,7 @@ export default function StudentMode({ onBack }: StudentModeProps) {
         setIsSubmitting(true);
         try {
             const { error } = await supabase
-                .from('quiz_attempts')
+                .from('Results')
                 .insert([
                     {
                         nom: userInfo.nom,
@@ -71,11 +83,23 @@ export default function StudentMode({ onBack }: StudentModeProps) {
                 ]);
 
             if (error) {
-                console.error('Error saving to Supabase:', error);
-                alert('Erreur lors de la sauvegarde. Vérifiez votre configuration Supabase.');
+                throw error;
             }
         } catch (error) {
-            console.error('Error:', error);
+            console.error('Error saving to Supabase, falling back to LocalStorage:', error);
+
+            // Sauvegarde locale en cas d'échec Supabase
+            const localResults = JSON.parse(localStorage.getItem('quiz_results_backup') || '[]');
+            localResults.push({
+                nom: userInfo.nom,
+                prenom: userInfo.prenom,
+                score: finalScore,
+                user_answers: answers,
+                date: new Date().toISOString()
+            });
+            localStorage.setItem('quiz_results_backup', JSON.stringify(localResults));
+
+            alert('Note: Vos résultats ont été sauvegardés localement car la connexion à Supabase a échoué. Votre note est quand même enregistrée !');
         } finally {
             setIsSubmitting(false);
             setStep('results');
@@ -135,8 +159,9 @@ export default function StudentMode({ onBack }: StudentModeProps) {
     }
 
     if (step === 'quiz') {
-        const question = questions[currentQuestion];
-        const progress = ((currentQuestion + 1) / questions.length) * 100;
+        const question = shuffledQuestions[currentQuestion];
+        if (!question) return null; // Safety check
+        const progress = ((currentQuestion + 1) / shuffledQuestions.length) * 100;
 
         return (
             <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 p-4 py-8">
@@ -144,7 +169,7 @@ export default function StudentMode({ onBack }: StudentModeProps) {
                     <div className="mb-6">
                         <div className="flex justify-between items-center mb-2">
                             <span className="text-purple-300 font-medium">
-                                Question {currentQuestion + 1} / {questions.length}
+                                Question {currentQuestion + 1} / {shuffledQuestions.length}
                             </span>
                             <span className="text-purple-300 font-medium">
                                 {userInfo.prenom} {userInfo.nom}
@@ -167,15 +192,15 @@ export default function StudentMode({ onBack }: StudentModeProps) {
                                         key={index}
                                         onClick={() => handleAnswerSelect(index)}
                                         className={`w-full text-left p-4 rounded-lg border-2 transition-all duration-300 transform hover:scale-102 ${selectedAnswer === index
-                                                ? 'bg-purple-600/30 border-purple-400 shadow-lg shadow-purple-500/30'
-                                                : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-purple-400/50'
+                                            ? 'bg-purple-600/30 border-purple-400 shadow-lg shadow-purple-500/30'
+                                            : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-purple-400/50'
                                             }`}
                                     >
                                         <div className="flex items-center gap-3">
                                             <div
                                                 className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedAnswer === index
-                                                        ? 'border-purple-400 bg-purple-500'
-                                                        : 'border-white/30'
+                                                    ? 'border-purple-400 bg-purple-500'
+                                                    : 'border-white/30'
                                                     }`}
                                             >
                                                 {selectedAnswer === index && (
@@ -193,13 +218,13 @@ export default function StudentMode({ onBack }: StudentModeProps) {
                             onClick={handleNextQuestion}
                             disabled={selectedAnswer === null || isSubmitting}
                             className={`mt-8 w-full py-3 rounded-lg font-semibold transition-all duration-300 ${selectedAnswer === null || isSubmitting
-                                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                    : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transform hover:scale-105 shadow-lg hover:shadow-purple-500/50'
+                                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 transform hover:scale-105 shadow-lg hover:shadow-purple-500/50'
                                 }`}
                         >
                             {isSubmitting
                                 ? 'Enregistrement...'
-                                : currentQuestion < questions.length - 1
+                                : currentQuestion < shuffledQuestions.length - 1
                                     ? 'Question Suivante'
                                     : 'Terminer le Quiz'}
                         </button>
@@ -210,7 +235,8 @@ export default function StudentMode({ onBack }: StudentModeProps) {
     }
 
     // Results
-    const percentage = Math.round((score / questions.length) * 100);
+    const totalQuestions = originalQuestions.length;
+    const percentage = Math.round((score / totalQuestions) * 100);
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
             <div className="max-w-2xl w-full">
@@ -228,7 +254,7 @@ export default function StudentMode({ onBack }: StudentModeProps) {
                     <div className="bg-white/5 rounded-lg p-6 mb-8">
                         <p className="text-gray-300 text-lg mb-2">Votre Score</p>
                         <p className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
-                            {score} / {questions.length}
+                            {score} / {totalQuestions}
                         </p>
                     </div>
 
