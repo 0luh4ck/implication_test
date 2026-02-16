@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase, QuizAttempt } from '@/lib/supabase';
+import { supabase, QuizAttempt, ExerciseSubmission } from '@/lib/supabase';
 import { questions } from '@/data/questions';
 
 interface AdminModeProps {
@@ -9,13 +9,17 @@ interface AdminModeProps {
 }
 
 export default function AdminMode({ onBack }: AdminModeProps) {
+    const [view, setView] = useState<'quiz' | 'exo'>('quiz');
     const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
+    const [exercises, setExercises] = useState<ExerciseSubmission[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedAttempt, setSelectedAttempt] = useState<QuizAttempt | null>(null);
+    const [selectedExo, setSelectedExo] = useState<ExerciseSubmission | null>(null);
 
     useEffect(() => {
-        fetchAttempts();
-    }, []);
+        if (view === 'quiz') fetchAttempts();
+        else fetchExercises();
+    }, [view]);
 
     const fetchAttempts = async () => {
         setLoading(true);
@@ -37,6 +41,19 @@ export default function AdminMode({ onBack }: AdminModeProps) {
         }
     };
 
+    const fetchExercises = async () => {
+        setLoading(true);
+        try {
+            const { data, error } = await supabase
+                .from('Exercises')
+                .select('*')
+                .order('created_at', { ascending: false });
+            if (!error) setExercises(data || []);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const getPercentage = (attempt: QuizAttempt) => {
         if (!attempt.user_answers || attempt.user_answers.length === 0) return 0;
         return Math.round((attempt.score / attempt.user_answers.length) * 100);
@@ -45,12 +62,25 @@ export default function AdminMode({ onBack }: AdminModeProps) {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 md:p-8">
             <div className="max-w-6xl mx-auto">
-                <div className="flex justify-between items-center mb-8">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
                     <div>
                         <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-500">
                             Dashboard Admin
                         </h1>
-                        <p className="text-gray-400 mt-1">Gérez et consultez les performances des étudiants</p>
+                        <div className="flex gap-4 mt-4">
+                            <button
+                                onClick={() => setView('quiz')}
+                                className={`px-4 py-2 rounded-lg font-semibold transition-all ${view === 'quiz' ? 'bg-purple-600 text-white' : 'bg-white/5 text-gray-400 border border-white/10'}`}
+                            >
+                                Résultats Quiz
+                            </button>
+                            <button
+                                onClick={() => setView('exo')}
+                                className={`px-4 py-2 rounded-lg font-semibold transition-all ${view === 'exo' ? 'bg-blue-600 text-white' : 'bg-white/5 text-gray-400 border border-white/10'}`}
+                            >
+                                Travaux Exo
+                            </button>
+                        </div>
                     </div>
                     <button
                         onClick={onBack}
@@ -75,55 +105,81 @@ export default function AdminMode({ onBack }: AdminModeProps) {
                                     <tr className="bg-white/5 border-b border-white/10">
                                         <th className="px-6 py-4 text-gray-300 font-semibold">Étudiant</th>
                                         <th className="px-6 py-4 text-gray-300 font-semibold">Date</th>
-                                        <th className="px-6 py-4 text-gray-300 font-semibold">Score</th>
+                                        {view === 'quiz' && <th className="px-6 py-4 text-gray-300 font-semibold">Score</th>}
                                         <th className="px-6 py-4 text-gray-300 font-semibold text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/5">
-                                    {attempts.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                                                Aucun résultat trouvé pour le moment.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        attempts.map((attempt) => (
-                                            <tr
-                                                key={attempt.id}
-                                                onClick={() => setSelectedAttempt(attempt)}
-                                                className="hover:bg-white/5 cursor-pointer transition-colors group"
-                                            >
-                                                <td className="px-6 py-4">
-                                                    <div className="font-medium text-white group-hover:text-purple-400 transition-colors">
-                                                        {attempt.prenom} {attempt.nom}
-                                                    </div>
-                                                </td>
-                                                <td className="px-6 py-4 text-gray-400">
-                                                    {attempt.created_at ? new Date(attempt.created_at).toLocaleDateString('fr-FR', {
-                                                        day: '2-digit',
-                                                        month: '2-digit',
-                                                        year: 'numeric',
-                                                        hour: '2-digit',
-                                                        minute: '2-digit'
-                                                    }) : '-'}
-                                                </td>
-                                                <td className="px-6 py-4">
-                                                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${getPercentage(attempt) >= 70
-                                                        ? 'bg-green-500/20 text-green-400'
-                                                        : getPercentage(attempt) >= 40
-                                                            ? 'bg-yellow-500/20 text-yellow-400'
-                                                            : 'bg-red-500/20 text-red-400'
-                                                        }`}>
-                                                        {attempt.score} / {attempt.user_answers.length} ({getPercentage(attempt)}%)
-                                                    </span>
-                                                </td>
-                                                <td className="px-6 py-4 text-right">
-                                                    <button className="text-purple-400 hover:text-purple-300 font-medium">
-                                                        Voir Détails
-                                                    </button>
+                                    {view === 'quiz' ? (
+                                        attempts.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
+                                                    Aucun résultat trouvé pour le moment.
                                                 </td>
                                             </tr>
-                                        ))
+                                        ) : (
+                                            attempts.map((attempt) => (
+                                                <tr
+                                                    key={attempt.id}
+                                                    onClick={() => setSelectedAttempt(attempt)}
+                                                    className="hover:bg-white/5 cursor-pointer transition-colors group"
+                                                >
+                                                    <td className="px-6 py-4">
+                                                        <div className="font-medium text-white group-hover:text-purple-400 transition-colors">
+                                                            {attempt.prenom} {attempt.nom}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-gray-400">
+                                                        {attempt.created_at ? new Date(attempt.created_at).toLocaleString('fr-FR', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        }) : '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className={`px-3 py-1 rounded-full text-sm font-bold ${getPercentage(attempt) >= 70
+                                                            ? 'bg-green-500/20 text-green-400'
+                                                            : getPercentage(attempt) >= 40
+                                                                ? 'bg-yellow-500/20 text-yellow-400'
+                                                                : 'bg-red-500/20 text-red-400'
+                                                            }`}>
+                                                            {attempt.score} / {attempt.user_answers.length} ({getPercentage(attempt)}%)
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button className="text-purple-400 hover:text-purple-300 font-medium">
+                                                            Voir Détails
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )
+                                    ) : (
+                                        exercises.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={3} className="px-6 py-12 text-center text-gray-500">
+                                                    Aucun exercice soumis.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            exercises.map((exo) => (
+                                                <tr key={exo.id} onClick={() => setSelectedExo(exo)} className="hover:bg-blue-500/5 cursor-pointer transition-colors group">
+                                                    <td className="px-6 py-4 font-medium text-white">{exo.prenom} {exo.nom}</td>
+                                                    <td className="px-6 py-4 text-gray-400">
+                                                        {exo.created_at ? new Date(exo.created_at).toLocaleString('fr-FR', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            year: 'numeric',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        }) : '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right"><button className="text-blue-400 font-medium">Voir Code</button></td>
+                                                </tr>
+                                            ))
+                                        )
                                     )}
                                 </tbody>
                             </table>
@@ -131,7 +187,7 @@ export default function AdminMode({ onBack }: AdminModeProps) {
                     </div>
                 )}
 
-                {/* Modal Détails */}
+                {/* Modal Détails Quiz */}
                 {selectedAttempt && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
                         <div className="bg-gray-900 border border-white/20 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
@@ -226,6 +282,33 @@ export default function AdminMode({ onBack }: AdminModeProps) {
                                 >
                                     Fermer
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Modal Détails Exo */}
+                {selectedExo && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <div className="bg-gray-900 border border-white/20 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-white">{selectedExo.prenom} {selectedExo.nom}</h2>
+                                    <p className="text-blue-400">Soumission Exercice Libre</p>
+                                </div>
+                                <button onClick={() => setSelectedExo(null)} className="p-2 hover:bg-white/10 rounded-full"><svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg></button>
+                            </div>
+                            <div className="p-6 overflow-y-auto bg-black/20">
+                                <pre className="text-blue-100 font-mono text-sm whitespace-pre-wrap">{selectedExo.code}</pre>
+                            </div>
+                            <div className="p-4 border-t border-white/10 bg-white/5 text-right text-gray-500 text-xs">
+                                Envoyé le {new Date(selectedExo.created_at || '').toLocaleString('fr-FR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                })}
                             </div>
                         </div>
                     </div>

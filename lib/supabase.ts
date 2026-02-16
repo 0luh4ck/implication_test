@@ -16,3 +16,11 @@ export interface QuizAttempt {
     user_answers: { questionId: number; selectedAnswer?: number; codeAnswer?: string }[];
     created_at?: string;
 }
+
+export interface ExerciseSubmission {
+    id?: number;
+    nom: string;
+    prenom: string;
+    code: string;
+    created_at?: string;
+}
