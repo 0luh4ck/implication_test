@@ -37,11 +37,14 @@ export default function ExoMode({ onBack }: ExoModeProps) {
                     code: code
                 }]);
 
-            if (error) throw error;
+            if (error) {
+                console.error('Supabase error:', error);
+                throw new Error(error.message);
+            }
             setStep('success');
-        } catch (error) {
+        } catch (error: any) {
             console.error('Error submitting exercise:', error);
-            alert("Une erreur est survenue lors de la soumission. Vérifiez votre connexion.");
+            alert(`Erreur: ${error.message || "Vérifiez votre connexion ou si la table 'Exercises' existe dans Supabase."}`);
         } finally {
             setIsSubmitting(false);
         }
