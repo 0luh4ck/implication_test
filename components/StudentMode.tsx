@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { questions as originalQuestions, Question } from '@/data/questions';
 import { supabase } from '@/lib/supabase';
+import Image from 'next/image';
 
 interface StudentModeProps {
     onBack: () => void;
@@ -36,7 +37,8 @@ export default function StudentMode({ onBack }: StudentModeProps) {
     const handleInfoSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (userInfo.nom && userInfo.prenom) {
-            setShuffledQuestions(shuffleArray(originalQuestions));
+            const shuffled = shuffleArray(originalQuestions);
+            setShuffledQuestions(shuffled.slice(0, 30));
             setStep('quiz');
         }
     };
@@ -121,6 +123,11 @@ export default function StudentMode({ onBack }: StudentModeProps) {
                     </button>
 
                     <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 shadow-2xl">
+                        <div className="flex justify-center mb-6">
+                            <div className="bg-white/5 p-2 rounded-xl backdrop-blur-sm border border-white/10">
+                                <Image src="/logo.png" alt="Logo" width={64} height={64} className="object-contain" />
+                            </div>
+                        </div>
                         <h2 className="text-3xl font-bold text-white mb-6">Informations Étudiant</h2>
                         <form onSubmit={handleInfoSubmit} className="space-y-6">
                             <div>

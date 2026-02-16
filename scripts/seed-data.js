@@ -38,6 +38,15 @@ const dummyAttempts = [
             { questionId: 19, selectedAnswer: 1 }, // Correct
             { questionId: 20, selectedAnswer: 1 }, // Correct
             { questionId: 21, selectedAnswer: 2 }, // Wrong (Correct is 3)
+            { questionId: 22, selectedAnswer: 1 },
+            { questionId: 23, selectedAnswer: 2 },
+            { questionId: 24, selectedAnswer: 1 },
+            { questionId: 25, selectedAnswer: 3 },
+            { questionId: 26, selectedAnswer: 1 },
+            { questionId: 27, selectedAnswer: 2 },
+            { questionId: 28, selectedAnswer: 1 },
+            { questionId: 29, selectedAnswer: 1 },
+            { questionId: 30, selectedAnswer: 1 },
         ]
     },
     {

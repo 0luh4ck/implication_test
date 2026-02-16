@@ -1,24 +1,50 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import StudentMode from '@/components/StudentMode';
 import AdminMode from '@/components/AdminMode';
+import AdminLogin from '@/components/AdminLogin';
 
 export default function Home() {
   const [mode, setMode] = useState<'select' | 'student' | 'admin'>('select');
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
   if (mode === 'student') {
     return <StudentMode onBack={() => setMode('select')} />;
   }
 
   if (mode === 'admin') {
-    return <AdminMode onBack={() => setMode('select')} />;
+    if (!isAdminAuthenticated) {
+      return (
+        <AdminLogin
+          onLogin={() => setIsAdminAuthenticated(true)}
+          onBack={() => setMode('select')}
+        />
+      );
+    }
+    return <AdminMode onBack={() => {
+      setMode('select');
+      setIsAdminAuthenticated(false); // Optionnel: déconnexion au retour
+    }} />;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         <div className="text-center mb-12">
+          <div className="mb-6 flex justify-center">
+            <div className="relative w-32 h-32 bg-white/10 rounded-3xl p-4 backdrop-blur-md border border-white/20 shadow-2xl transform hover:rotate-6 transition-transform duration-300">
+              <Image
+                src="/logo.png"
+                alt="Logo Quiz Blockchain"
+                width={128}
+                height={128}
+                className="object-contain"
+                priority
+              />
+            </div>
+          </div>
           <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600 mb-4">
             Quiz Blockchain
           </h1>
@@ -90,7 +116,7 @@ export default function Home() {
         <div className="mt-12 text-center">
           <div className="inline-block bg-white/5 backdrop-blur-sm rounded-lg px-6 py-3 border border-white/10">
             <p className="text-gray-300 text-sm">
-              💡 <span className="font-semibold">21 questions</span> sur la Blockchain et les Smart Contracts
+              💡 <span className="font-semibold">30 questions</span> sur la Blockchain et les Smart Contracts
             </p>
           </div>
         </div>

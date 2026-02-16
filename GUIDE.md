@@ -43,7 +43,7 @@ Ouvrez [http://localhost:3000](http://localhost:3000) dans votre navigateur.
 ### Test Manuel
 1. Cliquez sur **Mode Étudiant**.
 2. Remplissez vos informations (Nom/Prénom).
-3. Répondez aux 21 questions.
+3. Répondez aux 30 questions.
 4. À la fin, vérifiez que votre score s'affiche.
 5. Revenez à l'accueil et allez dans le **Mode Admin** pour voir votre tentative dans la liste.
 

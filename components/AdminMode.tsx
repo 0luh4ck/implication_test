@@ -37,8 +37,9 @@ export default function AdminMode({ onBack }: AdminModeProps) {
         }
     };
 
-    const getPercentage = (score: number) => {
-        return Math.round((score / questions.length) * 100);
+    const getPercentage = (attempt: QuizAttempt) => {
+        if (!attempt.user_answers || attempt.user_answers.length === 0) return 0;
+        return Math.round((attempt.score / attempt.user_answers.length) * 100);
     };
 
     return (
@@ -107,13 +108,13 @@ export default function AdminMode({ onBack }: AdminModeProps) {
                                                     }) : '-'}
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${getPercentage(attempt.score) >= 70
-                                                            ? 'bg-green-500/20 text-green-400'
-                                                            : getPercentage(attempt.score) >= 40
-                                                                ? 'bg-yellow-500/20 text-yellow-400'
-                                                                : 'bg-red-500/20 text-red-400'
+                                                    <span className={`px-3 py-1 rounded-full text-sm font-bold ${getPercentage(attempt) >= 70
+                                                        ? 'bg-green-500/20 text-green-400'
+                                                        : getPercentage(attempt) >= 40
+                                                            ? 'bg-yellow-500/20 text-yellow-400'
+                                                            : 'bg-red-500/20 text-red-400'
                                                         }`}>
-                                                        {attempt.score} / {questions.length} ({getPercentage(attempt.score)}%)
+                                                        {attempt.score} / {attempt.user_answers.length} ({getPercentage(attempt)}%)
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
@@ -140,7 +141,7 @@ export default function AdminMode({ onBack }: AdminModeProps) {
                                         Détails du test : {selectedAttempt.prenom} {selectedAttempt.nom}
                                     </h2>
                                     <p className="text-purple-400 font-semibold">
-                                        Score Final : {selectedAttempt.score} / {questions.length} ({getPercentage(selectedAttempt.score)}%)
+                                        Score Final : {selectedAttempt.score} / {selectedAttempt.user_answers.length} ({getPercentage(selectedAttempt)}%)
                                     </p>
                                 </div>
                                 <button
@@ -154,12 +155,13 @@ export default function AdminMode({ onBack }: AdminModeProps) {
                             </div>
 
                             <div className="p-6 overflow-y-auto space-y-6 bg-gray-900/50">
-                                {questions.map((q, idx) => {
-                                    const userAns = selectedAttempt.user_answers.find(ua => ua.questionId === q.id);
-                                    const isCorrect = userAns?.selectedAnswer === q.correctAnswer;
+                                {selectedAttempt.user_answers.map((ua, idx) => {
+                                    const q = questions.find(q => q.id === ua.questionId);
+                                    if (!q) return null;
+                                    const isCorrect = ua.selectedAnswer === q.correctAnswer;
 
                                     return (
-                                        <div key={q.id} className={`p-4 rounded-xl border-l-4 ${isCorrect ? 'bg-green-500/5 border-green-500' : 'bg-red-500/5 border-red-500'
+                                        <div key={ua.questionId} className={`p-4 rounded-xl border-l-4 ${isCorrect ? 'bg-green-500/5 border-green-500' : 'bg-red-500/5 border-red-500'
                                             }`}>
                                             <h4 className="text-white font-semibold mb-3">
                                                 {idx + 1}. {q.question}
@@ -167,7 +169,7 @@ export default function AdminMode({ onBack }: AdminModeProps) {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 {q.options.map((opt, optIdx) => {
                                                     if (!opt) return null;
-                                                    const isUserSelected = userAns?.selectedAnswer === optIdx;
+                                                    const isUserSelected = ua.selectedAnswer === optIdx;
                                                     const isRightAnswer = q.correctAnswer === optIdx;
 
                                                     let cardStyles = "p-3 rounded-lg border text-sm ";
