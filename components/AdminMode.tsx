@@ -158,46 +158,62 @@ export default function AdminMode({ onBack }: AdminModeProps) {
                                 {selectedAttempt.user_answers.map((ua, idx) => {
                                     const q = questions.find(q => q.id === ua.questionId);
                                     if (!q) return null;
-                                    const isCorrect = ua.selectedAnswer === q.correctAnswer;
+
+                                    const isCoding = q.type === 'coding';
+                                    let isCorrect = false;
+
+                                    if (isCoding) {
+                                        const code = ua.codeAnswer?.toLowerCase() || '';
+                                        isCorrect = q.expectedKeywords?.every(kw => code.includes(kw.toLowerCase())) || false;
+                                    } else {
+                                        isCorrect = ua.selectedAnswer === q.correctAnswer;
+                                    }
 
                                     return (
-                                        <div key={ua.questionId} className={`p-4 rounded-xl border-l-4 ${isCorrect ? 'bg-green-500/5 border-green-500' : 'bg-red-500/5 border-red-500'
-                                            }`}>
+                                        <div key={ua.questionId} className={`p-4 rounded-xl border-l-4 ${isCorrect ? 'bg-green-500/5 border-green-500' : 'bg-red-500/5 border-red-500'}`}>
                                             <h4 className="text-white font-semibold mb-3">
                                                 {idx + 1}. {q.question}
                                             </h4>
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                {q.options.map((opt, optIdx) => {
-                                                    if (!opt) return null;
-                                                    const isUserSelected = ua.selectedAnswer === optIdx;
-                                                    const isRightAnswer = q.correctAnswer === optIdx;
 
-                                                    let cardStyles = "p-3 rounded-lg border text-sm ";
-                                                    if (isUserSelected && isRightAnswer) {
-                                                        cardStyles += "bg-green-500/20 border-green-500 text-green-200";
-                                                    } else if (isUserSelected && !isRightAnswer) {
-                                                        cardStyles += "bg-red-500/20 border-red-500 text-red-200";
-                                                    } else if (isRightAnswer) {
-                                                        cardStyles += "bg-white/5 border-green-500/50 text-green-200/70";
-                                                    } else {
-                                                        cardStyles += "bg-white/5 border-white/5 text-gray-400";
-                                                    }
-
-                                                    return (
-                                                        <div key={optIdx} className={cardStyles}>
-                                                            <div className="flex justify-between items-center">
-                                                                <span>{opt}</span>
-                                                                {isUserSelected && (
-                                                                    <span className="text-[10px] uppercase font-bold ml-2">Choisi</span>
-                                                                )}
-                                                                {isRightAnswer && !isUserSelected && (
-                                                                    <span className="text-[10px] uppercase font-bold ml-2 opacity-50">Correction</span>
-                                                                )}
-                                                            </div>
+                                            {isCoding ? (
+                                                <div className="bg-black/40 rounded-lg p-4 font-mono text-sm border border-white/10">
+                                                    <div className="text-xs text-gray-500 mb-2 uppercase select-none">Code Soumis :</div>
+                                                    <pre className="text-purple-200 whitespace-pre-wrap">{ua.codeAnswer || "// Aucun code soumis"}</pre>
+                                                    {!isCorrect && q.expectedKeywords && (
+                                                        <div className="mt-4 p-2 bg-red-500/10 rounded border border-red-500/20 text-xs text-red-400">
+                                                            Mots-clés manquants ou incorrects.
                                                         </div>
-                                                    );
-                                                })}
-                                            </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {q.options?.map((opt, optIdx) => {
+                                                        const isUserSelected = ua.selectedAnswer === optIdx;
+                                                        const isRightAnswer = q.correctAnswer === optIdx;
+
+                                                        let cardStyles = "p-3 rounded-lg border text-sm ";
+                                                        if (isUserSelected && isRightAnswer) {
+                                                            cardStyles += "bg-green-500/20 border-green-500 text-green-200";
+                                                        } else if (isUserSelected && !isRightAnswer) {
+                                                            cardStyles += "bg-red-500/20 border-red-500 text-red-200";
+                                                        } else if (isRightAnswer) {
+                                                            cardStyles += "bg-white/5 border-green-500/50 text-green-200/70";
+                                                        } else {
+                                                            cardStyles += "bg-white/5 border-white/5 text-gray-400";
+                                                        }
+
+                                                        return (
+                                                            <div key={optIdx} className={cardStyles}>
+                                                                <div className="flex justify-between items-center">
+                                                                    <span>{opt}</span>
+                                                                    {isUserSelected && <span className="text-[10px] uppercase font-bold ml-2">Choisi</span>}
+                                                                    {isRightAnswer && !isUserSelected && <span className="text-[10px] uppercase font-bold ml-2 opacity-50">Correction</span>}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
